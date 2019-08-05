@@ -32,17 +32,18 @@ class _ListPostState extends State<ListPost> {
       host: 'hostname',
       port: 3306,
       user: 'root',
-      password: 'password'
+      password: 'password',
       db: 'posts');
-
-
 
   Widget refreshButton() {
     return IconButton(
       icon: Icon(Icons.refresh),
       onPressed: () async {
+        currentLocation = await location.getLocation();
         var _conn = await MySqlConnection.connect(_settings);
-        var results = await _conn.query('select content, clock from all_posts');
+        var results = await _conn.query(
+            'select content, clock from all_posts where lat < ? AND lat > ? AND lon < ? AND lon > ? order by clock desc',
+            [currentLocation.latitude+0.00005,currentLocation.latitude-0.00005,currentLocation.longitude+.00005,currentLocation.longitude-.00005]);
         setState(() {
           posts.clear();
           for (var row in results) {
@@ -60,7 +61,6 @@ class _ListPostState extends State<ListPost> {
     );
   }
 
-
   textDialog() async {
     TextEditingController controller = TextEditingController();
     return showDialog(
@@ -72,20 +72,24 @@ class _ListPostState extends State<ListPost> {
               decoration: InputDecoration(hintText: "Enter a post..."),
             ),
             actions: <Widget>[
-
               new FlatButton(
                   child: new Text('ENTER'),
                   onPressed: () async {
                     currentLocation = await location.getLocation();
                     var _conn = await MySqlConnection.connect(_settings);
                     var results = await _conn.query(
-                      'insert into all_posts (content, longitude, latitude, clock) values (?, ?, ?, ?)', [controller.text, currentLocation.longitude, currentLocation.latitude, DateTime.now().toUtc()]);
+                        'insert into all_posts (content, longitude, latitude, clock) values (?, ?, ?, ?)',
+                        [
+                          controller.text,
+                          currentLocation.longitude,
+                          currentLocation.latitude,
+                          DateTime.now().toUtc()
+                        ]);
                     print(currentLocation.latitude);
                     controller.dispose();
                     super.dispose();
                     Navigator.of(context).pop();
                   }),
-
               new FlatButton(
                 child: new Text('CANCEL'),
                 onPressed: () {
